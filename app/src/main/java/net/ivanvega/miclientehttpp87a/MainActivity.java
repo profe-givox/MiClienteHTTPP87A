@@ -3,22 +3,34 @@ package net.ivanvega.miclientehttpp87a;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Xml;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.ImageRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
-public class MainActivity extends AppCompatActivity  implements DownloadCallback {
+import org.json.JSONException;
+import org.json.JSONObject;
 
+public class MainActivity extends AppCompatActivity  implements DownloadCallback {
+    RequestQueue queue;
+    public static final String TAG = "MyTag";
+    StringRequest stringRequest;
+    ImageView img;
 
 
     // Keep a reference to the NetworkFragment, which owns the AsyncTask object
@@ -34,16 +46,19 @@ public class MainActivity extends AppCompatActivity  implements DownloadCallback
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        img = findViewById(R.id.img);
         networkFragment = NetworkFragment.getInstance(getSupportFragmentManager(), "https://www.google.com");
 
+        // Set the tag on the request.
 
 
         // Instantiate the RequestQueue.
-        RequestQueue queue = Volley.newRequestQueue(this);
+         queue = Volley.newRequestQueue(this);
         String url ="http://www.google.com";
 
         // Request a string response from the provided URL.
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+        stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
@@ -62,8 +77,11 @@ public class MainActivity extends AppCompatActivity  implements DownloadCallback
                         }
         });
 
+        stringRequest.setTag(TAG);
+
         // Add the request to the RequestQueue.
         queue.add(stringRequest);
+
 
 
     }
@@ -116,7 +134,7 @@ public class MainActivity extends AppCompatActivity  implements DownloadCallback
 
     }
 
-    @Override
+        @Override
     public void finishDownloading() {
         downloading = false;
         if (networkFragment != null) {
@@ -127,6 +145,69 @@ public class MainActivity extends AppCompatActivity  implements DownloadCallback
 
     public void click(View view) {
 
-        startDownload();
+        switch (view.getId()){
+            case R.id.btnHTTP:
+                startDownload();
+                break;
+
+
+            case R.id.btnImage:
+                volleyImage();
+                break;
+
+            case R.id.btnjson:
+                traerJSON();
+                break;
+
+
+        }
+
+    }
+
+    private void traerJSON() {
+
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET,
+                "https://simplifiedcoding.net/demos/view-flipper/heroes.php",
+                null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                Toast.makeText(MainActivity.this, response.toString(), Toast.LENGTH_SHORT).show();
+
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                error.printStackTrace();
+            }
+        }
+        );
+        MySingleton.getInstance(getApplicationContext()).addToRequestQueue(jsonObjectRequest);
+    }
+
+    private void volleyImage() {
+        ImageRequest imageRequest = new ImageRequest("https://keepcoding.io/es/wp-content/uploads/sites/4/2018/10/android-3d-820x400.jpg",
+                new Response.Listener<Bitmap>() {
+                    @Override
+                    public void onResponse(Bitmap response) {
+                        img.setImageBitmap(response);
+                    }
+                }, 200, 200, ImageView.ScaleType.CENTER, Bitmap.Config.ALPHA_8,
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+
+                    }
+                }
+                );
+        MySingleton.getInstance(getApplicationContext()).addToRequestQueue(imageRequest);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (queue != null) {
+            queue.cancelAll(TAG);
+        }
     }
 }
